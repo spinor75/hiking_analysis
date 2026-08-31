@@ -21,12 +21,17 @@ GPX의 산행 시간대 동안의 시간별 기온·습도를 기상청에서 �
   - weather_summary.csv (전체 산행 요약 - FI 비교용)
   - 산행별 시간-기온 상세 CSV
 
+[재실행 시]
+  같은 폴더에 weather_summary.csv가 이미 있으면, 그 파일에 기록된
+  산행(파일명 기준)은 건너뛰고 새로 발견된 산행 기록만 기상청에서
+  받아와 기존 CSV에 이어붙입니다.
+
 [데이터 소스]
   기상청 ASOS(종관관측, 시간자료) 또는 AWS(방재관측, 매분자료→시간평균)
   API: 지상 시간자료 (kma_sfctm)
 """
 
-import sys, time, math, csv, glob
+import sys, time, math, csv, glob, os
 from datetime import timezone, timedelta
 import requests
 import gpxpy
@@ -74,6 +79,18 @@ def haversine(lat1, lon1, lat2, lon2):
     dp = math.radians(lat2-lat1); dl = math.radians(lon2-lon1)
     a = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
     return 2*R*math.asin(math.sqrt(a))
+
+
+def load_existing_summary(csv_path):
+    """이전에 저장된 weather_summary.csv를 읽어 {파일명: 행딕셔너리}로 반환.
+    파일이 없으면 빈 딕셔너리."""
+    existing = {}
+    if not os.path.exists(csv_path):
+        return existing
+    with open(csv_path, encoding='utf-8-sig', newline='') as f:
+        for row in csv.DictReader(f):
+            existing[row['file']] = row
+    return existing
 
 
 def pick_station(path):
@@ -227,22 +244,34 @@ if __name__ == '__main__':
         print("   발급: https://apihub.kma.go.kr 가입 → 마이페이지 → 인증키")
         sys.exit(1)
 
-    results = []
+    SUMMARY_CSV = 'weather_summary.csv'
+    results = load_existing_summary(SUMMARY_CSV)
+    if results:
+        print(f"기존 {SUMMARY_CSV} 발견: {len(results)}개 산행 기록은 건너뜁니다.")
+
+    new_count = 0
     for pattern in sys.argv[1:]:
         for path in sorted(glob.glob(pattern)):
+            if path in results:
+                print(f"건너뜀 (이미 처리됨): {path}")
+                continue
             try:
                 r = analyze(path)
-                if r: results.append(r)
+                if r:
+                    results[path] = r
+                    new_count += 1
                 time.sleep(0.5)
             except Exception as e:
                 print(f"오류 ({path}): {e}")
 
     if results:
-        with open('weather_summary.csv','w',newline='',encoding='utf-8-sig') as f:
+        with open(SUMMARY_CSV, 'w', newline='', encoding='utf-8-sig') as f:
             wr = csv.DictWriter(f, fieldnames=['file','date','station','ta_station','ta_corr','rh','hi'])
             wr.writeheader()
-            wr.writerows(results)
-        print(f"\n요약 저장: weather_summary.csv ({len(results)}개 산행)")
+            wr.writerows(results.values())
+        print(f"\n요약 저장: {SUMMARY_CSV} (신규 {new_count}개 추가, 총 {len(results)}개 산행)")
+    else:
+        print("\n처리할 산행 기록이 없습니다.")
 
 # ============================================================
 # [중요 - 고도 보정에 관하여]
