@@ -46,6 +46,9 @@ def merge_gpx_files(input_paths, sort_by_time=True):
         merged.waypoints.extend(gpx.waypoints)
         merged.routes.extend(gpx.routes)
         merged.tracks.extend(gpx.tracks)
+        # 심박수 등 확장 데이터(gpxtpx 등)의 네임스페이스 선언을 합쳐두지 않으면
+        # 출력 시 확장 태그가 접두사 없이 URI 그대로 쓰여 XML이 깨진다.
+        merged.nsmap.update(gpx.nsmap)
 
     return merged
 
