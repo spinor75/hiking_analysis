@@ -51,6 +51,25 @@ python weather_fetch.py *.gpx
 - 콘솔: 산행별 관측소 평균기온, 고도보정 평균기온, 평균습도, 평균 체감온도
 - 파일: `weather_summary.csv` (file, date, station, ta_station, ta_corr, rh, hi)
 
+### 3. `merge_gpx.py` — GPX 파일 병합
+
+하나의 등산 기록이 GPS 기기 오류나 재시작 등으로 여러 개의 GPX 파일로 나뉘어 저장된 경우, 이를 하나의 GPX 파일로 합칩니다.
+
+**주요 기능**
+- 각 GPX 파일 트랙의 시작 시각을 기준으로 정렬 후 병합 (`--no-sort`로 입력 순서 그대로 병합 가능)
+- 웨이포인트, 루트도 함께 병합
+- 출력 파일명은 `-o` 옵션으로 지정
+
+**사용법**
+```bash
+pip install gpxpy
+python merge_gpx.py 파일1.gpx 파일2.gpx [파일3.gpx ...] -o 합친결과.gpx
+```
+
+**출력**
+- 콘솔: 합친 파일 수, 총 포인트 수, 트랙 수
+- 파일: `-o`로 지정한 GPX 파일
+
 ## 참고 / 알려진 제한
 
 - `dem_elevation_fix.py`: 기본 SRTM 30m은 정밀도가 제한적이며, 국내 산악지형은 국토지리정보원 DEM(5m)을 로컬로 쓰는 편이 더 정확합니다.
